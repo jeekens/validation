@@ -5,25 +5,19 @@ namespace Jeekens\Validator\Rule;
 
 
 use Jeekens\Basics\Str;
-use Jeekens\Validation\TypeRuleInterface;
+use Jeekens\Validator\TypeRule;
 
-class StringType implements TypeRuleInterface
+class StringType extends TypeRule
 {
+
+    protected $typeName = 'string';
+
+    protected $relyTypeName = 'string';
+
 
     public function check($value): bool
     {
-        // TODO: Implement check() method.
-    }
-
-
-    public function compare($condition, $value): bool
-    {
-        // TODO: Implement compare() method.
-    }
-
-    public function getTypeName(): string
-    {
-        return 'string';
+        return is_string($value);
     }
 
     public function count($value): int
