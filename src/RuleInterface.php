@@ -1,13 +1,11 @@
 <?php
 
 
-namespace Jeekens\Validator;
+namespace Jeekens\Validation;
 
 
 interface RuleInterface
 {
-
-    public function setContext($context = null);
 
     public function check($value): bool;
 

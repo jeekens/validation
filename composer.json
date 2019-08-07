@@ -1,14 +1,15 @@
 {
-  "name": "jeekens/validator",
+  "name": "jeekens/Validation",
   "type": "library",
   "version": "v1.0.0",
   "keywords": [
     "php",
     "swoole",
     "jeekens",
-    "validator"
+    "validator",
+    "validation"
   ],
-  "description": "jeekens validator component",
+  "description": "jeekens Validation component",
   "license": "Apache-2.0",
   "require": {
     "php": ">7.2",

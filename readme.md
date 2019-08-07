@@ -1,2 +1,2 @@
-# Jeekens Validator Component
-Jeekens Validator Component
+# Jeekens Validation Component
+Jeekens Validation Component

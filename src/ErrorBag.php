@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 
-namespace Jeekens\Validator;
+namespace Jeekens\Validation;
 
 
 class ErrorBag

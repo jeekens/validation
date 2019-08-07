@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Jeekens\Validator\Exception;
+namespace Jeekens\Validation\Exception;
 
 
 class ValidatorException extends \Exception
