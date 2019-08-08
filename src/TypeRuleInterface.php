@@ -9,10 +9,10 @@ interface TypeRuleInterface extends RuleInterface
 
     public function compare($value, string $condition, array $attribute): bool;
 
-    public function getTypeName(): ?string;
+    public function getSize($value, ?string $format): int;
 
-    public function getRelyTypeName(): string;
+    public function formatCheck($value, ?string $format): bool;
 
-    public function count($value): int;
+    public function getDefaultFormat(): ?string;
 
 }

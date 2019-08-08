@@ -5,13 +5,13 @@ namespace Jeekens\Validator;
 
 
 use Jeekens\Validation\TypeRuleInterface;
+use Jeekens\Validator\Exception\UnsupportedFormatVerificationException;
 
 abstract class TypeRule implements TypeRuleInterface
 {
 
-    protected $typeName = null;
 
-    protected $relyTypeName = null;
+    protected $format = null;
 
 
     public function compare($value, string $condition, array $attribute): bool
@@ -29,14 +29,21 @@ abstract class TypeRule implements TypeRuleInterface
         return array_search($value, $array) === false;
     }
 
-    public function getRelyTypeName(): string
+    /**
+     * @param $value
+     * @param string $format
+     *
+     * @return bool
+     *
+     * @throws UnsupportedFormatVerificationException
+     */
+    public function formatCheck($value, ?string $format): bool
     {
-        return $this->relyTypeName;
-    }
-
-    public function getTypeName(): ?string
-    {
-        return $this->typeName;
+        if (! empty($format) && ($method = $this->format[$format]) && method_exists($this, $method)) {
+            return $this->$method($value);
+        } else {
+            throw new UnsupportedFormatVerificationException(sprintf('Rule is unsupported "%s" format!', $format));
+        }
     }
 
 }

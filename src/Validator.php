@@ -19,4 +19,7 @@ class Validator
 
     protected $emptyRules = ['emptyNot'];
 
+    protected $sometime = ['sometime'];
+
+
 }
