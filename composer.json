@@ -17,7 +17,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Jeekens\\Validator\\": "src/"
+      "Jeekens\\Validation\\": "src/"
     }
   },
   "minimum-stability": "dev"

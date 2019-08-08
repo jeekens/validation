@@ -1,27 +1,31 @@
-<?php
+<?php declare(strict_types=1);
 
 
-namespace Jeekens\Validator\Rule;
+namespace Jeekens\validation\Rule;
 
-
-use Jeekens\Validator\TypeRule;
+use DateTime;
+use Jeekens\validation\TypeRule;
 
 class DateType extends TypeRule
 {
 
+    protected $ruleName = 'date';
+
     public function getSize($value, ?string $format): int
     {
-        // TODO: Implement getSize() method.
+        return strtotime($value);
     }
 
     public function check($value): bool
     {
-        // TODO: Implement check() method.
+        $date = date_parse($value);
+        return checkdate($date['month'], $date['day'], $date['year']);
     }
 
     public function formatCheck($value, ?string $format): bool
     {
-        // TODO: Implement formatCheck() method.
+        $date = DateTime::createFromFormat('!'.$format, $value);
+        return $date && $date->format($format) == $value;
     }
 
     public function getDefaultFormat(): ?string

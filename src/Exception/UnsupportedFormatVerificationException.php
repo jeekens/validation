@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Jeekens\Validator\Exception;
+namespace Jeekens\validation\Exception;
 
 
 use Jeekens\Validation\Exception\ValidatorException;

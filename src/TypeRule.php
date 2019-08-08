@@ -1,17 +1,19 @@
 <?php
 
 
-namespace Jeekens\Validator;
+namespace Jeekens\validation;
 
 
 use Jeekens\Validation\TypeRuleInterface;
-use Jeekens\Validator\Exception\UnsupportedFormatVerificationException;
+use Jeekens\validation\Exception\UnsupportedFormatVerificationException;
 
 abstract class TypeRule implements TypeRuleInterface
 {
 
 
     protected $format = null;
+
+    protected $ruleName = null;
 
 
     public function compare($value, string $condition, array $attribute): bool
@@ -44,6 +46,11 @@ abstract class TypeRule implements TypeRuleInterface
         } else {
             throw new UnsupportedFormatVerificationException(sprintf('Rule is unsupported "%s" format!', $format));
         }
+    }
+
+    public function getRuleName(): string
+    {
+        return $this->ruleName;
     }
 
 }

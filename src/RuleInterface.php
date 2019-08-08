@@ -9,4 +9,6 @@ interface RuleInterface
 
     public function check($value): bool;
 
+    public function getRuleName(): string;
+
 }

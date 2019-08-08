@@ -10,9 +10,11 @@ class ErrorBag
     protected $messages = [];
 
 
-    public function __construct($messages)
+    public function __construct(?array $messages = null)
     {
-        $this->messages = $messages;
+        if (! empty($this->messages)) {
+            $this->messages = $messages;
+        }
     }
 
     /**
@@ -31,7 +33,7 @@ class ErrorBag
      */
     public function has(string $key): bool
     {
-        return isset($this->messages[$key]);
+        return array_key_exists($key, $this->messages);
     }
 
     /**
@@ -73,6 +75,22 @@ class ErrorBag
         }
 
         return $tmp;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isEmpty(): bool
+    {
+        return empty($this->messages);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isNotEmpty(): bool
+    {
+        return ! empty($this->messages);
     }
 
 }

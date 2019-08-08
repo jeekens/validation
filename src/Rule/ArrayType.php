@@ -1,11 +1,11 @@
-<?php
+<?php declare(strict_types=1);
 
 
-namespace Jeekens\Validator\Rule;
+namespace Jeekens\validation\Rule;
 
 
 use Jeekens\Basics\Arr;
-use Jeekens\Validator\TypeRule;
+use Jeekens\validation\TypeRule;
 
 class ArrayType extends TypeRule
 {
@@ -14,6 +14,8 @@ class ArrayType extends TypeRule
         'index' => 'indexCheck',
         'assoc' => 'assocCheck',
     ];
+
+    protected $ruleName = 'array';
 
     public function check($value): bool
     {
