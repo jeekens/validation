@@ -3,6 +3,7 @@
 
 namespace Jeekens\Validation;
 
+use Jeekens\Basics\Arr;
 use Jeekens\validation\Rule\DateType;
 use Jeekens\validation\Rule\ArrayType;
 use Jeekens\validation\Rule\StringType;
@@ -12,24 +13,46 @@ class Validator
 
     protected $typeRules = [];
 
-    protected $sizeRules = ['size', 'between', 'min', 'max', 'gt', 'lt', 'eq', 'neq', 'lqe', 'geq'];
-
-    protected $compareRules = ['in', 'notIn'];
-
-    protected $implicitRules = [
-        'required',
-        'requiredWith',
-        'requiredWithout',
-        'requiredWithoutAll',
-        'requiredWithAll',
-        'requiredUnless',
+    protected $rules = [
+        'required' => 'vaRequired',
+        'requiredIf' => 'vaRequiredIf',
+        'requiredWith' => 'vaRequiredWith',
+        'requiredWithAll' => 'vaRequiredWithAll',
+        'requiredWithOut' => 'vaRequiredWithOut',
+        'requiredWithOutAll' => 'vaRequiredWithOutAll',
+        'requiredUnless' => 'vaRequiredUnless',
+        'size' => 'vaSize',
+        'between' => 'vaBetween',
+        'min' => 'vaMin',
+        'max' => 'vaMax',
+        'gt' => 'vaGt',
+        'lt' => 'vaLt',
+        'eq' => 'vaEq',
+        'neq' => 'vaNeq',
+        'leq' => 'vaLeq',
+        'geq' => 'vaGeq',
+        'in' => 'vaIn',
+        'notIn' => 'vaNotIn',
+        'confirm' => 'vaConfirm',
+        'confirmNot' => 'vaConfirmNot',
+        'emptyNot' => 'vaEmptyNot',
     ];
 
-    protected $confirmRule = ['confirm', 'confirmNot'];
-
-    protected $emptyRules = ['emptyNot'];
-
     protected $propertyResult = [];
+
+    protected $dataType = [];
+
+    protected $data = [];
+
+    /**
+     * @var string|null
+     */
+    protected $nowEachIndex = null;
+
+    /**
+     * @var Validation
+     */
+    protected $validation;
 
     /**
      * Validator constructor.
@@ -67,10 +90,25 @@ class Validator
             }
 
             foreach ($rule as $key => $item) {
+                $nowRule = $item;
                 if (stripos($item, ':')) {
                     $tmp = explode(':', $item, 2);
+                    $nowRule = $tmp[0];
                     $param = explode(',', $tmp[1]);
-                    $rule[$key] = [$tmp[0], $param];
+                    $rule[$key] = [$nowRule, $param];
+                }
+
+                /**
+                 * @var $typeRule TypeRuleInterface
+                 */
+                if (($typeRule = $this->typeRules[$nowRule] ?? null)) {
+
+                    if (is_array($rule[$key])) {
+                        $this->dataType[$attributeName] = [$nowRule, $param];
+                    } else {
+                        $this->dataType[$attributeName] = [$nowRule, [$typeRule->getDefaultFormat()]];
+                    }
+
                 }
             }
 
@@ -90,6 +128,8 @@ class Validator
     public function validation(array $data, array $rules, ?array $messages = null): Validation
     {
         $rules = $this->parseRules($rules);
+        $this->setValue($data);
+        $validation = new Validation();
 
         foreach ($rules as $key => $rule) {
 
@@ -97,13 +137,30 @@ class Validator
                 continue;
             }
 
-            $this->propertyResult[$key] = $this->validationProperty($data[$key] ?? null, $rule);
+            $this->propertyResult[$key] = $this->validationProperty($key, $rule, $validation);
         }
+
+
     }
 
-    protected function validationProperty($value, $rules): bool
+    protected function validationProperty($key, $rules, $validation): bool
     {
-        
+        $dataType = $this->dataType[$key] ?? null;
+
+        if ($dataType === null) {
+            $dataType = gettype($this->getValue($key));
+        }
+
+    }
+
+    protected function getValue(string $key, bool $is_each = false)
+    {
+        return Arr::get($this->data, $key);
+    }
+
+    protected function setValue($data)
+    {
+        $this->data = $data;
     }
 
 }
