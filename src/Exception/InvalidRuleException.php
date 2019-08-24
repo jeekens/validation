@@ -4,7 +4,7 @@
 namespace Jeekens\Validation\Exception;
 
 
-class RuleNotFound extends ValidatorException
+class InvalidRuleException extends ValidatorException
 {
 
 }

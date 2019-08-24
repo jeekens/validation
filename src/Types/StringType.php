@@ -4,30 +4,19 @@
 namespace Jeekens\validation\Types;
 
 
-use Jeekens\Validation\TypeInterface;
+use function is_string;
 
-class StringType implements TypeInterface
+class StringType implements TypeRuleInterface
 {
 
-    public function check($value)
+    public function check($value): bool
     {
-        return $this->checkType($value);
+        return is_string($value);
     }
 
-
-    public function checkType($value)
+    public function isEmpty($value): bool
     {
-        return is_string($value) || is_numeric($value);
-    }
-
-    public function getErrMsg() : ?string
-    {
-        // TODO: Implement getErrMsg() method.
-    }
-
-    public function compare($input): int
-    {
-        // TODO: Implement compare() method.
+        return $value === '';
     }
 
 }
