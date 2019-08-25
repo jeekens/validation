@@ -221,30 +221,8 @@ class Validate implements ValidateInterface
                 return true;
             }
 
-            // 拍平所有多维数组
-            $data = Arr::dot($this->data);
-            $subData = [];
-            $subRules = [];
-            $fRules = [];
 
-            foreach ($data as $name => $item) {
-                if (strpos($name, '.')) {
-                    $subData[$name] = [
-                        '/^'.str_replace('*', '(?:.*?)(?!\.)', str_replace('.', '\.', $name)).'$/',
-                        $item
-                    ];
-                }
-            }
-
-            foreach ($this->rules as $name => $item) {
-                if (strpos($name, '.')) {
-                    $subRules[$name] = $item;
-                } else {
-                    $rules[$name] = $item;
-                }
-            }
-
-            foreach ($fRules as $field => $rules) {
+            foreach ($this->rules as $field => $rules) {
                 if ($this->validated[$field]) {
                     continue;
                 }
@@ -291,67 +269,6 @@ class Validate implements ValidateInterface
                         $this->validated[$field] = false;
                         continue;
                     }
-                }
-            }
-
-            foreach ($subRules as $field => $rules) {
-                $type = $this->dataType[$field] ?? $this->defaultType;
-                $typeCheck = self::$types[$type] ?? self::$baseTypes[$type];
-                $required = $this->checkRequired($field);
-                $confirm = $this->checkConfirm($field);
-                $nullable = $this->checkEmpty($field);
-                $validate = false;
-                $tmp = [];
-
-                foreach ($subData as $index => $data) {
-                    if (preg_match($rules[0], $index)) {
-                        $validate = true;
-                        if ($required && $data === null) {
-                            $this->addError($field, 'required', $index);
-                            $tmp[] = false;
-                            continue 1;
-                        }
-
-                        if (!$nullable && $isEmpty) {
-                            $this->addError($field, 'empty', $index);
-                            $tmp[] = false;
-                            continue 1;
-                        }
-
-                        if ($nullable && $isEmpty) {
-                            $tmp[] = true;
-                            continue 1;
-                        }
-
-                        if (!$typeCheck->check($data)) {
-                            $this->addError($field, 'type', $index);
-                            $tmp[] = false;
-                            continue 1;
-                        }
-
-                        if ($confirm && !$this->confirmCheck($field)) {
-                            $this->addError($field, 'confirm', $index);
-                            $tmp[] = false;
-                            continue 1;
-                        }
-
-                        foreach ($rules as $rule) {
-                            $tmp[] = $this->validateField($rule, $field, $data);
-                        }
-                    }
-                }
-
-                if ($validate === false) {
-
-                    if ($required) {
-                        $this->addError($field, 'required', $field);
-                        $this->validated[$field] = false;
-                    } else {
-                        $this->validated[$field] = true;
-                    }
-
-                } else {
-                    $validate = false;
                 }
             }
 
