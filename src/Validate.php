@@ -5,6 +5,7 @@ namespace Jeekens\Validation;
 
 
 use InvalidArgumentException;
+use Jeekens\Basics\Arr;
 use Jeekens\Validation\Exception\InvalidRuleException;
 use Jeekens\validation\Types\ArrayType;
 use Jeekens\Validation\Types\FloatType;
@@ -17,7 +18,9 @@ use function explode;
 use function in_array;
 use function is_array;
 use function is_string;
+use function preg_match;
 use function sprintf;
+use function str_replace;
 use function strpos;
 
 /**
@@ -118,7 +121,15 @@ class Validate implements ValidateInterface
         'required_with',
         'required_out',
         'required_with_all',
-        'required_out_all'
+        'required_out_all',
+        'required_with_if',
+        'required_out_if',
+        'required_with_all_if',
+        'required_out_all_if',
+        'required_with_unless',
+        'required_out_unless',
+        'required_with_all_unless',
+        'required_out_all_unless',
     ];
 
     /**
@@ -169,7 +180,15 @@ class Validate implements ValidateInterface
         'not_regex',
     ];
 
-
+    /**
+     * Validate constructor.
+     *
+     * @param array|null $data
+     * @param array|null $rules
+     * @param array|null $messages
+     *
+     * @throws InvalidRuleException
+     */
     public function __construct(?array $data = null, ?array $rules = null, ?array $messages = null)
     {
         if (!empty($data)) {
@@ -187,6 +206,10 @@ class Validate implements ValidateInterface
         if (empty(self::$baseTypes)) {
             $this->initValidationTyped();
         }
+
+        if (! empty($data) && empty($rules)) {
+            $this->validate();
+        }
     }
 
 
@@ -194,7 +217,148 @@ class Validate implements ValidateInterface
     {
         if ($this->result !== null) {
             if (empty($this->data) && empty($this->rules)) {
+                $this->result = true;
                 return true;
+            }
+
+            // 拍平所有多维数组
+            $data = Arr::dot($this->data);
+            $subData = [];
+            $subRules = [];
+            $fRules = [];
+
+            foreach ($data as $name => $item) {
+                if (strpos($name, '.')) {
+                    $subData[$name] = [
+                        '/^'.str_replace('*', '(?:.*?)(?!\.)', str_replace('.', '\.', $name)).'$/',
+                        $item
+                    ];
+                }
+            }
+
+            foreach ($this->rules as $name => $item) {
+                if (strpos($name, '.')) {
+                    $subRules[$name] = $item;
+                } else {
+                    $rules[$name] = $item;
+                }
+            }
+
+            foreach ($fRules as $field => $rules) {
+                if ($this->validated[$field]) {
+                    continue;
+                }
+
+                $type = $this->dataType[$field] ?? $this->defaultType;
+                $typeCheck = self::$types[$type] ?? self::$baseTypes[$type];
+                $required = $this->checkRequired($field);
+                $confirm = $this->checkConfirm($field);
+                $nullable = $this->checkEmpty($field);
+                $data = $this->data[$field] ?? null;
+                $isEmpty = $typeCheck->isEmpty($data);
+
+                if ($required && $data === null) {
+                    $this->addError($field, 'required');
+                    $this->validated[$field] = false;
+                    continue;
+                }
+
+                if (!$nullable && $isEmpty) {
+                    $this->addError($field, 'empty');
+                    $this->validated[$field] = false;
+                    continue;
+                }
+
+                if ($nullable && $isEmpty) {
+                    $this->validated[$field] = true;
+                    continue;
+                }
+
+                if (!$typeCheck->check($data)) {
+                    $this->addError($field, 'type');
+                    $this->validated[$field] = false;
+                    continue;
+                }
+
+                if ($confirm && !$this->confirmCheck($field)) {
+                    $this->addError($field, 'confirm');
+                    $this->validated[$field] = false;
+                    continue;
+                }
+
+                foreach ($rules as $rule) {
+                    if ($this->validateField($rule, $field, $data) === false) {
+                        $this->validated[$field] = false;
+                        continue;
+                    }
+                }
+            }
+
+            foreach ($subRules as $field => $rules) {
+                $type = $this->dataType[$field] ?? $this->defaultType;
+                $typeCheck = self::$types[$type] ?? self::$baseTypes[$type];
+                $required = $this->checkRequired($field);
+                $confirm = $this->checkConfirm($field);
+                $nullable = $this->checkEmpty($field);
+                $validate = false;
+                $tmp = [];
+
+                foreach ($subData as $index => $data) {
+                    if (preg_match($rules[0], $index)) {
+                        $validate = true;
+                        if ($required && $data === null) {
+                            $this->addError($field, 'required', $index);
+                            $tmp[] = false;
+                            continue 1;
+                        }
+
+                        if (!$nullable && $isEmpty) {
+                            $this->addError($field, 'empty', $index);
+                            $tmp[] = false;
+                            continue 1;
+                        }
+
+                        if ($nullable && $isEmpty) {
+                            $tmp[] = true;
+                            continue 1;
+                        }
+
+                        if (!$typeCheck->check($data)) {
+                            $this->addError($field, 'type', $index);
+                            $tmp[] = false;
+                            continue 1;
+                        }
+
+                        if ($confirm && !$this->confirmCheck($field)) {
+                            $this->addError($field, 'confirm', $index);
+                            $tmp[] = false;
+                            continue 1;
+                        }
+
+                        foreach ($rules as $rule) {
+                            $tmp[] = $this->validateField($rule, $field, $data);
+                        }
+                    }
+                }
+
+                if ($validate === false) {
+
+                    if ($required) {
+                        $this->addError($field, 'required', $field);
+                        $this->validated[$field] = false;
+                    } else {
+                        $this->validated[$field] = true;
+                    }
+
+                } else {
+                    $validate = false;
+                }
+            }
+
+            if (in_array(false, $this->validated, true)) {
+                $this->result = false;
+            } else {
+                $this->result = true;
             }
         }
 
@@ -222,7 +386,11 @@ class Validate implements ValidateInterface
     public function setRules(array $rules)
     {
         $this->rules = $rules;
-        $this->scanRules();
+
+        if ($this->result === null) {
+            $this->scanRules();
+        }
+
         return $this;
     }
 
