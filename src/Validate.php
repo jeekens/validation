@@ -6,6 +6,11 @@ namespace Jeekens\Validation;
 
 use InvalidArgumentException;
 use Jeekens\Validation\Exception\InvalidRuleException;
+use Jeekens\Validation\Traits\ComTrait;
+use Jeekens\Validation\Traits\ConfirmTrait;
+use Jeekens\Validation\Traits\EmptyTrait;
+use Jeekens\Validation\Traits\RequiredTrait;
+use Jeekens\Validation\Traits\SizeTrait;
 use Jeekens\validation\Types\ArrayType;
 use Jeekens\Validation\Types\FloatType;
 use Jeekens\Validation\Types\IntegerType;
@@ -27,6 +32,9 @@ use function strpos;
  */
 class Validate implements ValidateInterface
 {
+
+    use RequiredTrait, EmptyTrait, ConfirmTrait,
+        SizeTrait, ComTrait;
 
     /**
      * @var array

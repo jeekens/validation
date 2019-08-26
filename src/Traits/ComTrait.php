@@ -4,7 +4,7 @@
 namespace Jeekens\Validation\Traits;
 
 
-trait comTrait
+trait ComTrait
 {
 
 }

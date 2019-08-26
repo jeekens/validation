@@ -6,7 +6,6 @@ namespace Jeekens\validation\Types;
 
 use Jeekens\Basics\Str;
 use function is_string;
-use function strlen;
 
 class StringType implements TypeRuleInterface
 {
