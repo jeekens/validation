@@ -11,6 +11,6 @@ interface TypeRuleInterface extends RuleInterface
 
     public function isEmpty($value): bool;
 
-    public function getSize($value): int;
+    public function getSize($value): ?string;
 
 }

@@ -5,7 +5,6 @@ namespace Jeekens\Validation;
 
 
 use InvalidArgumentException;
-use Jeekens\Basics\Arr;
 use Jeekens\Validation\Exception\InvalidRuleException;
 use Jeekens\validation\Types\ArrayType;
 use Jeekens\Validation\Types\FloatType;
@@ -18,9 +17,7 @@ use function explode;
 use function in_array;
 use function is_array;
 use function is_string;
-use function preg_match;
 use function sprintf;
-use function str_replace;
 use function strpos;
 
 /**
@@ -45,6 +42,11 @@ class Validate implements ValidateInterface
      * @var string
      */
     protected $defaultType = 'string';
+
+    /**
+     * @var string
+     */
+    protected $defaultMessage = '';
 
     /**
      * @var array
@@ -90,11 +92,6 @@ class Validate implements ValidateInterface
      * @var array
      */
     protected $required = [];
-
-    /**
-     * @var array
-     */
-    protected $confirmed = [];
 
     /**
      * @var bool[]
@@ -212,7 +209,13 @@ class Validate implements ValidateInterface
         }
     }
 
-
+    /**
+     * 对参数进行验证
+     *
+     * @return bool
+     *
+     * @throws InvalidRuleException
+     */
     protected function validate(): bool
     {
         if ($this->result !== null) {
@@ -221,54 +224,29 @@ class Validate implements ValidateInterface
                 return true;
             }
 
-
             foreach ($this->rules as $field => $rules) {
                 if ($this->validated[$field]) {
                     continue;
                 }
 
-                $type = $this->dataType[$field] ?? $this->defaultType;
-                $typeCheck = self::$types[$type] ?? self::$baseTypes[$type];
                 $required = $this->checkRequired($field);
-                $confirm = $this->checkConfirm($field);
-                $nullable = $this->checkEmpty($field);
-                $data = $this->data[$field] ?? null;
-                $isEmpty = $typeCheck->isEmpty($data);
 
-                if ($required && $data === null) {
-                    $this->addError($field, 'required');
-                    $this->validated[$field] = false;
-                    continue;
-                }
-
-                if (!$nullable && $isEmpty) {
-                    $this->addError($field, 'empty');
-                    $this->validated[$field] = false;
-                    continue;
-                }
-
-                if ($nullable && $isEmpty) {
-                    $this->validated[$field] = true;
-                    continue;
-                }
-
-                if (!$typeCheck->check($data)) {
-                    $this->addError($field, 'type');
-                    $this->validated[$field] = false;
-                    continue;
-                }
-
-                if ($confirm && !$this->confirmCheck($field)) {
-                    $this->addError($field, 'confirm');
-                    $this->validated[$field] = false;
-                    continue;
-                }
-
-                foreach ($rules as $rule) {
-                    if ($this->validateField($rule, $field, $data) === false) {
+                if (strpos('.', $field)) {
+                    $data = data_get($this->data, $field);
+                    if ($required && $data === null) {
+                        $this->addError($field, 'required');
                         $this->validated[$field] = false;
                         continue;
                     }
+                    $this->validated[$field] = $this->validateDotField($field, $rules, $data);
+                } else {
+                    $data = $this->data[$field] ?? null;
+                    if ($required && $data === null) {
+                        $this->addError($field, 'required');
+                        $this->validated[$field] = false;
+                        continue;
+                    }
+                    $this->validated[$field] = $this->validateField($field, $rules, $data);
                 }
             }
 
@@ -280,6 +258,135 @@ class Validate implements ValidateInterface
         }
 
         return $this->result;
+    }
+
+    /**
+     * 验证数据
+     *
+     * @param string $field
+     * @param array $rules
+     * @param $data
+     * @param string|null $index
+     *
+     * @return bool
+     *
+     * @throws InvalidRuleException
+     */
+    protected function validateField(string $field, array $rules, $data, ?string $index = null): bool
+    {
+        $type = $this->dataType[$field] ?? $this->defaultType;
+        $typeCheck = self::$types[$type] ?? self::$baseTypes[$type];
+        $nullable = $this->checkEmpty($field);
+        $isEmpty = $typeCheck->isEmpty($data);
+
+        if (! $typeCheck->check($data)) {
+            $this->addError($field, 'type', null, $index);
+            return false;
+        }
+
+        if ($nullable && $isEmpty) {
+            return true;
+        }
+
+        if (!$nullable && $isEmpty) {
+            $this->addError($field, 'empty', null, $index);
+            return false;
+        }
+
+        foreach ($rules as $rule) {
+            $args = null;
+
+            if (is_array($rule)) {
+                $args = $rule[1];
+                $rule= $rule[0];
+            }
+
+            if (($method = $typeCheck->getRuleMethod($rule)) && ! empty($method)) {
+                $res =  $type->$method($rule, $data, $args);
+
+                if ($res == false) {
+                    $this->addError($field, $rule, $args, $index);
+                }
+                return $res;
+            } elseif (in_array($rule, $this->sizeCon)) {
+                $res = $this->checkSize($rule, $data, $args);
+
+                if ($res == false) {
+                    $this->addError($field, $rule, $args, $index);
+                }
+                return $res;
+            } elseif (in_array($rule, $this->comCon)) {
+                $res = $this->$rule($data, $args);
+
+                if ($res == false) {
+                    $this->addError($field, $rule, $args, $index);
+                }
+                return $res;
+            } elseif (in_array($rule, $this->confirmCon)) {
+                $res = $this->checkConfirm($rule, $data, $args);
+
+                if ($res == false) {
+                    $this->addError($field, $rule, $args, $index);
+                }
+                return $res;
+            } else {
+                throw new InvalidRuleException(sprintf('Invalid "%s" rule', $rule));
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * 验证带.的子集数据
+     *
+     * @param string $field
+     * @param array $rules
+     * @param $data
+     *
+     * @return bool
+     *
+     * @throws InvalidRuleException
+     */
+    protected function validateDotField(string $field, array $rules, $data): bool
+    {
+        $result = [];
+
+        foreach ($data as $index => $item) {
+            $result[] = $this->validateField($field, $rules, $data, $index);
+        }
+
+        return $result === array_filter($result, function ($res) {
+            return $res;
+        });
+    }
+
+    /**
+     * 为字段添加一个错误信息
+     *
+     * @param string $field
+     * @param string $rule
+     * @param null $args
+     * @param string|null $index
+     */
+    protected function addError(string $field, string $rule, $args = null, ?string $index = null)
+    {
+        $errorBag = $this->errorBag();
+        $key = $index === null ? $field : $index;
+
+        if ($rule === 'type') {
+            $message = self::$baseTypes[$this->dataType[$field]]->getMessage() ??
+                self::$types[$this->dataType[$field]]->getMessage();
+        } elseif (isset($this->messages[$field]) && is_string($this->messages[$field])) {
+            $message = $this->messages[$field];
+        } elseif (isset($this->messages[$field][$rule]) && is_string($this->messages[$field][$rule])) {
+            $message = $this->messages[$field][$rule];
+        } else {
+            $message = self::$validate[$rule]->getMessage();
+        }
+
+        $message = $message ?? $this->defaultMessage;
+        $errorBag->add($key, $message);
     }
 
     /**
@@ -381,6 +488,15 @@ class Validate implements ValidateInterface
         }
     }
 
+    /**
+     * 确认传入的特殊规则
+     *
+     * @param string $name
+     * @param string $rule
+     * @param array|null $args
+     *
+     * @return bool
+     */
     protected function checkCon(string $name, string $rule, ?array $args = null): bool
     {
         $isArgsNull = $args === null;
@@ -392,11 +508,6 @@ class Validate implements ValidateInterface
 
         if (in_array($rule, $this->requiredCon)) {
             $isArgsNull ? $this->required[$name] = $rule : $this->required[$name] = [$rule, $args];
-            return true;
-        }
-
-        if (in_array($rule, $this->confirmCon)) {
-            $isArgsNull ? $this->confirmed[$name] = $rule : $this->confirmed[$name] = [$rule, $args];
             return true;
         }
 

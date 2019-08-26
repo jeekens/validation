@@ -13,6 +13,8 @@ interface RuleInterface
 
     public function bindTyped(): ?string;
 
-    public function getMessage(string $rule): ?string;
+    public function getMessage(): ?string;
+
+    public function getRuleMethod(string $rule): ?string;
 
 }
